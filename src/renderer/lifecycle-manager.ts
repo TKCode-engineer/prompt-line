@@ -51,14 +51,25 @@ export class LifecycleManager {
   private initializeTextArea(draftValue: string, hasDraft: boolean): void {
     this.setTextCallback(draftValue);
 
-    setTimeout(() => {
+    // Immediate focus for Linux/WSL IME activation
+    if (process.platform === 'linux') {
       this.focusTextareaCallback();
       if (!hasDraft) {
         this.selectAllCallback();
       } else {
         this.setCursorPositionCallback(draftValue.length);
       }
-    }, TIMEOUTS.TEXTAREA_FOCUS_DELAY);
+    } else {
+      // Keep delay for macOS/Windows compatibility
+      setTimeout(() => {
+        this.focusTextareaCallback();
+        if (!hasDraft) {
+          this.selectAllCallback();
+        } else {
+          this.setCursorPositionCallback(draftValue.length);
+        }
+      }, TIMEOUTS.TEXTAREA_FOCUS_DELAY);
+    }
   }
 
   private updateUserSettings(settings?: UserSettings): void {

@@ -10,6 +10,7 @@ import {
   sleep,
   checkAccessibilityPermission 
 } from '../utils/utils';
+import weztermIntegration from '../utils/wezterm-integration';
 import type WindowManager from '../managers/window-manager';
 import type DraftManager from '../managers/draft-manager';
 import type SettingsManager from '../managers/settings-manager';
@@ -143,24 +144,48 @@ class IPCHandlers {
       await sleep(Math.max(config.timing.windowHideDelay, 5));
 
       try {
-        if (previousApp && config.platform.isMac) {
-          await activateAndPasteWithNativeTool(previousApp);
-          logger.info('Activate and paste operation completed successfully');
-          return { success: true };
-        } else if (config.platform.isMac) {
-          const focusSuccess = await this.windowManager.focusPreviousApp();
-
-          if (focusSuccess) {
-            await sleep(config.timing.appFocusDelay);
-            await pasteWithNativeTool();
-            logger.info('Paste operation completed successfully');
+        // Wezterm環境の検出と処理
+        const weztermContext = await weztermIntegration.detectWeztermEnvironment();
+        
+        if (weztermContext.isWeztermEnvironment) {
+          // Wezterm環境の場合は専用の処理を使用
+          const weztermSuccess = await weztermIntegration.performWeztermPaste(text);
+          if (weztermSuccess) {
+            logger.info('Wezterm paste operation completed successfully');
             return { success: true };
           } else {
-            await pasteWithNativeTool();
-            logger.warn('Paste attempted without focus confirmation');
-            return { success: true, warning: 'Could not focus previous application' };
+            logger.warn('Wezterm paste operation failed, falling back to standard method');
           }
-        } else {
+        }
+
+        // macOS環境での処理
+        if (config.platform.isMac) {
+          if (previousApp) {
+            await activateAndPasteWithNativeTool(previousApp);
+            logger.info('Activate and paste operation completed successfully');
+            return { success: true };
+          } else {
+            const focusSuccess = await this.windowManager.focusPreviousApp();
+            if (focusSuccess) {
+              await sleep(config.timing.appFocusDelay);
+              await pasteWithNativeTool();
+              logger.info('Paste operation completed successfully');
+              return { success: true };
+            } else {
+              await pasteWithNativeTool();
+              logger.warn('Paste attempted without focus confirmation');
+              return { success: true, warning: 'Could not focus previous application' };
+            }
+          }
+        } 
+        // WSL環境での処理（Linux platform）
+        else if (process.platform === 'linux') {
+          await pasteWithNativeTool();
+          logger.info('WSL paste operation completed successfully');
+          return { success: true };
+        } 
+        // その他のプラットフォーム
+        else {
           logger.warn('Auto-paste not supported on this platform');
           return { success: true, warning: 'Auto-paste not supported on this platform' };
         }

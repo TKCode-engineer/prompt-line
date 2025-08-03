@@ -42,15 +42,15 @@ class AppConfigClass {
       skipTaskbar: true,
       resizable: false,
       webPreferences: {
-        // Enhanced security configuration
+        // Enhanced security configuration with font access for WSL
         nodeIntegration: false,
         contextIsolation: true,
-        webSecurity: true,
+        webSecurity: false,  // Disabled to allow system font access for Japanese characters
         preload: path.join(__dirname, '..', 'preload', 'preload.js'),
         
-        // Maintain existing settings
-        spellcheck: false,
-        disableDialogs: true,
+        // IME-friendly settings for Linux/WSL
+        spellcheck: process.platform === 'linux',  // Enable for IME compatibility
+        disableDialogs: process.platform !== 'linux',  // Allow IME candidate dialogs on Linux
         enableWebSQL: false,
         experimentalFeatures: false,
         defaultEncoding: 'UTF-8',
@@ -65,12 +65,12 @@ class AppConfigClass {
     };
 
     this.shortcuts = {
-      main: 'Cmd+Shift+Space',
-      paste: 'Cmd+Enter',
+      main: process.platform === 'darwin' ? 'Cmd+Shift+Space' : 'Ctrl+Shift+Space',
+      paste: process.platform === 'darwin' ? 'Cmd+Enter' : 'Ctrl+Enter',
       close: 'Escape',
       historyNext: 'Ctrl+j',
       historyPrev: 'Ctrl+k',
-      search: 'Cmd+f'
+      search: process.platform === 'darwin' ? 'Cmd+f' : 'Ctrl+f'
     };
 
     const userDataDir = path.join(os.homedir(), '.prompt-line');

@@ -110,6 +110,19 @@ export class PromptLineRenderer {
       this.historyUIManager.clearHistorySelection();
     });
 
+    // IME（日本語入力）対応のためのcompositionイベント
+    this.domManager.textarea.addEventListener('compositionstart', () => {
+      // IME入力開始時の処理
+      console.log('IME composition started');
+    });
+
+    this.domManager.textarea.addEventListener('compositionend', (e) => {
+      // IME入力終了時の処理
+      console.log('IME composition ended:', e.data);
+      this.domManager.updateCharCount();
+      this.draftManager.saveDraftDebounced();
+    });
+
     this.domManager.textarea.addEventListener('keydown', (e) => {
       this.handleKeyDown(e);
     });
@@ -147,6 +160,15 @@ export class PromptLineRenderer {
             e.stopImmediatePropagation();
           }
         }
+      });
+
+      // 検索入力フィールドのIME対応
+      this.domManager.searchInput.addEventListener('compositionstart', () => {
+        console.log('Search IME composition started');
+      });
+
+      this.domManager.searchInput.addEventListener('compositionend', (e) => {
+        console.log('Search IME composition ended:', e.data);
       });
     }
   }

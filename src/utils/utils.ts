@@ -269,10 +269,41 @@ function getCurrentApp(): Promise<AppInfo | null> {
   });
 }
 
-function pasteWithNativeTool(): Promise<void> {
+async function pasteWithNativeTool(): Promise<void> {
   return new Promise((resolve, reject) => {
-    if (process.platform !== 'darwin') {
-      reject(new Error('Native paste only supported on macOS'));
+    // WSL環境ではWindowsネイティブツールを使用
+    if (process.platform !== 'darwin' && process.platform !== 'linux') {
+      reject(new Error('Native paste only supported on macOS and Linux (WSL)'));
+      return;
+    }
+    
+    // WSL環境: 直接PowerShell経由でCtrl+Shift+V送信（Wezterm対応）
+    if (process.platform === 'linux') {
+      const options = {
+        timeout: TIMEOUTS.NATIVE_PASTE_TIMEOUT,
+        killSignal: 'SIGTERM' as const
+      };
+
+      // WSL環境では常にCtrl+Shift+V（Wezterm用）を送信
+      const shortcut = '^+v'; // Ctrl+Shift+V
+      const command = `powershell.exe -Command "Add-Type -AssemblyName System.Windows.Forms; [System.Windows.Forms.SendKeys]::SendWait('${shortcut}')"`;
+      
+      logger.debug('WSL環境でCtrl+Shift+V送信（Wezterm用）', { command, shortcut });
+
+      exec(command, options, (error, _, stderr) => {
+        if (error) {
+          logger.error('WSL PowerShell Ctrl+Shift+V送信失敗', {
+            error: error.message,
+            stderr,
+            command,
+            platform: process.platform
+          });
+          reject(new Error(`PowerShell Ctrl+Shift+V failed: ${error.message}`));
+        } else {
+          logger.info('WSL PowerShell Ctrl+Shift+V送信完了');
+          resolve();
+        }
+      });
       return;
     }
 

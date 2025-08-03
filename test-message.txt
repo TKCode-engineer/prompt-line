@@ -1,0 +1,1 @@
+Prompt Line Wezterm統合テスト - これはCtrl+Shift+Vでペーストされるはずです。🚀

@@ -15,12 +15,12 @@ class SettingsManager {
     
     this.defaultSettings = {
       shortcuts: {
-        main: 'Cmd+Shift+Space',
-        paste: 'Cmd+Enter',
+        main: process.platform === 'darwin' ? 'Cmd+Shift+Space' : 'Ctrl+Shift+Space',
+        paste: process.platform === 'darwin' ? 'Cmd+Enter' : 'Ctrl+Enter',
         close: 'Escape',
         historyNext: 'Ctrl+j',
         historyPrev: 'Ctrl+k',
-        search: 'Cmd+f'
+        search: process.platform === 'darwin' ? 'Cmd+f' : 'Ctrl+f'
       },
       window: {
         position: 'active-text-field',

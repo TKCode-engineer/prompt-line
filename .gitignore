@@ -18,6 +18,8 @@ src/**/*.map
 src/native-tools/keyboard-simulator
 src/native-tools/window-detector
 src/native-tools/text-field-detector
+# Windows native binaries (built from source)
+native/*.exe
 
 # Local configuration
 .claude/
@@ -63,3 +65,12 @@ temp/
 benchmarks/data/*.jsonl
 benchmarks/reports/*.json
 benchmarks/reports/*.txt
+
+# Runtime lock files
+*.lock
+
+# MCP Server configuration (user-specific)
+.serena/
+
+# NPM directory symlink (should not be tracked)
+npm

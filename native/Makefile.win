@@ -1,0 +1,32 @@
+# Windows版Makefile for C#ネイティブツール
+CSC = csc
+OUTPUT_DIR = ../src/native-tools
+SOURCES = window-detector.cs keyboard-simulator.cs text-field-detector.cs
+TARGETS = $(OUTPUT_DIR)/window-detector.exe $(OUTPUT_DIR)/keyboard-simulator.exe $(OUTPUT_DIR)/text-field-detector.exe
+
+# .NET Framework references
+DOTNET_REFS = /r:System.Text.Json.dll,UIAutomationClient.dll,System.Windows.Forms.dll
+
+all: $(TARGETS)
+
+$(OUTPUT_DIR)/window-detector.exe: window-detector.cs
+	@if not exist "$(OUTPUT_DIR)" mkdir "$(OUTPUT_DIR)"
+	$(CSC) /out:$@ /optimize+ /target:exe window-detector.cs /r:System.Text.Json.dll
+
+$(OUTPUT_DIR)/keyboard-simulator.exe: keyboard-simulator.cs
+	@if not exist "$(OUTPUT_DIR)" mkdir "$(OUTPUT_DIR)"
+	$(CSC) /out:$@ /optimize+ /target:exe keyboard-simulator.cs /r:System.Text.Json.dll,System.Windows.Forms.dll
+
+$(OUTPUT_DIR)/text-field-detector.exe: text-field-detector.cs
+	@if not exist "$(OUTPUT_DIR)" mkdir "$(OUTPUT_DIR)"
+	$(CSC) /out:$@ /optimize+ /target:exe text-field-detector.cs /r:System.Text.Json.dll,UIAutomationClient.dll
+
+install: all
+	@echo Windows native tools compiled successfully
+
+clean:
+	@if exist "$(OUTPUT_DIR)\*.exe" del /Q "$(OUTPUT_DIR)\*.exe"
+
+rebuild: clean all
+
+.PHONY: all install clean rebuild

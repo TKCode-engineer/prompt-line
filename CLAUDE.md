@@ -2,6 +2,15 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## Important Constraints
+
+**⚠️ External Configuration Policy:**
+- **DO NOT MODIFY** `/mnt/c/Users/taka1/.config/wezterm/wezterm.lua`
+- This file is **Windows-side user configuration** located outside the project scope
+- Any configuration changes must be made within this project's files only
+- Wezterm configuration is an external dependency, not part of this codebase
+- Use project's own configuration files for any needed changes
+
 ## Essential Commands
 
 ### Development

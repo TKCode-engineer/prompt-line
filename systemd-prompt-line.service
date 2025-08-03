@@ -1,0 +1,21 @@
+[Unit]
+Description=Prompt Line Application
+After=graphical-session.target
+
+[Service]
+Type=forking
+User=taka
+WorkingDirectory=/home/taka/workspace/prompt-line
+ExecStart=/home/taka/workspace/prompt-line/start-prompt-line-persistent.sh start
+ExecStop=/home/taka/workspace/prompt-line/start-prompt-line-persistent.sh stop
+ExecReload=/home/taka/workspace/prompt-line/start-prompt-line-persistent.sh restart
+PIDFile=/home/taka/workspace/prompt-line/.prompt-line.lock
+Restart=on-failure
+RestartSec=5
+Environment=HOME=/home/taka
+Environment=USER=taka
+Environment=DISPLAY=:0
+Environment=NODE_ENV=production
+
+[Install]
+WantedBy=default.target

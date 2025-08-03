@@ -56,8 +56,8 @@ export default defineConfig({
     port: 3000
   },
   
-  // Disable CSS code splitting to keep everything in one file
+  // Enable CSS code splitting to preserve external CSS files
   css: {
-    codeSplit: false
+    codeSplit: true
   }
 });

@@ -4,12 +4,25 @@
   "description": "Prompt Line is a macOS app developed to improve the prompt input experience in the terminal for CLI-based AI coding agents such as Claude Code, OpenAI Codex CLI, and Aider.",
   "main": "dist/main.js",
   "scripts": {
-    "start": "npm run compile && electron .",
-    "compile": "tsc && npm run build:renderer && cd native && make install && cp -r ../src/native-tools ../dist/",
-    "build:renderer": "vite build && cp src/renderer/input.html dist/renderer/input.html && cp -r src/renderer/styles dist/renderer/",
+    "start": "npm run compile && electron . --disable-gpu-sandbox --disable-software-rasterizer --disable-extensions",
+    "compile": "npm run compile:cross-platform",
+    "compile:mac": "tsc && npm run build:renderer && cd native && make install && cp -r ../src/native-tools ../dist/",
+    "compile:win": "tsc && npm run build:renderer && npm run build:native:win && npm run copy:assets",
+    "compile:linux": "tsc && npm run build:renderer && npm run copy:assets",
+    "compile:cross-platform": "tsc && npm run build:renderer && npm run build:native:cross-platform && npm run copy:assets",
+    "build:renderer": "vite build && cp src/renderer/input.html dist/renderer/input.html && cp -r src/renderer/styles dist/renderer/ && npm run fix:japanese-fonts",
+    "build:native:mac": "cd native && make install",
+    "build:native:win": "cd native && make -f Makefile.win install",
+    "build:native:linux": "echo 'Linux native tools not implemented yet'",
+    "build:native:cross-platform": "npm run build:native:detect-platform",
+    "build:native:detect-platform": "node -e \"const platform = process.platform; if (platform === 'darwin') { console.log('Building for macOS...'); require('child_process').execSync('npm run build:native:mac', {stdio: 'inherit'}); } else if (platform === 'win32') { console.log('Building for Windows...'); require('child_process').execSync('npm run build:native:win', {stdio: 'inherit'}); } else { console.log('Building for Linux...'); require('child_process').execSync('npm run build:native:linux', {stdio: 'inherit'}); }\"",
+    "copy:assets": "mkdir -p dist && if [ -d src/native-tools ]; then cp -r src/native-tools dist/; fi",
+    "fix:japanese-fonts": "cat > dist/renderer/styles/base/reset.css << 'EOF'\n/* CSS Reset and Base Styles */\n* {\n    margin: 0;\n    padding: 0;\n    box-sizing: border-box;\n}\n\nbody {\n    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Helvetica Neue', 'Yu Gothic UI', 'Meiryo UI', 'MS UI Gothic', 'Hiragino Kaku Gothic ProN', 'Hiragino Sans', 'BIZ UDPGothic', 'Noto Sans CJK JP', 'Noto Sans JP', 'Source Han Sans JP', 'DejaVu Sans', 'Ubuntu', sans-serif;\n    background: rgb(20, 20, 20);\n    overflow: hidden;\n    user-select: none;\n    margin: 0;\n    padding: 0;\n}\nEOF",
     "typecheck": "tsc --noEmit",
-    "build": "npm run compile && electron-builder --mac --publish=never",
-    "clean": "rm -rf dist/mac* dist/*.dmg dist/*.zip dist/*.blockmap",
+    "build": "npm run compile && npm run build:electron",
+    "build:electron": "npm run build:electron:detect-platform",
+    "build:electron:detect-platform": "node -e \"const platform = process.platform; if (platform === 'darwin') { require('child_process').execSync('electron-builder --mac --publish=never', {stdio: 'inherit'}); } else if (platform === 'win32') { require('child_process').execSync('electron-builder --win --publish=never', {stdio: 'inherit'}); } else { require('child_process').execSync('electron-builder --linux --publish=never', {stdio: 'inherit'}); }\"",
+    "clean": "rm -rf dist/mac* dist/win* dist/linux* dist/*.dmg dist/*.exe dist/*.AppImage dist/*.zip dist/*.blockmap",
     "release": "semantic-release",
     "test": "jest",
     "test:watch": "jest --watch",
@@ -140,6 +153,27 @@
           "arch": "arm64"
         }
       ]
+    },
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": "x64"
+        }
+      ],
+      "icon": "assets/Prompt-Line.ico",
+      "artifactName": "Prompt-Line-${version}-${arch}.${ext}"
+    },
+    "linux": {
+      "target": [
+        {
+          "target": "AppImage",
+          "arch": "x64"
+        }
+      ],
+      "icon": "assets/Prompt-Line.png",
+      "artifactName": "Prompt-Line-${version}-${arch}.${ext}",
+      "category": "Utility"
     },
     "dmg": {
       "contents": [

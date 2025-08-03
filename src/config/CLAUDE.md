@@ -2,6 +2,14 @@
 
 This module provides centralized configuration management for the Prompt Line application with a comprehensive, type-safe configuration system using a singleton pattern.
 
+## Important Constraints
+
+**⚠️ External Configuration Policy:**
+- **DO NOT MODIFY** `/mnt/c/Users/taka1/.config/wezterm/wezterm.lua`
+- This file is **Windows-side user configuration** and should remain untouched
+- Any Prompt Line configuration changes must be made within this project's scope only
+- Wezterm configuration is external dependency, not part of this project's codebase
+
 ## Files
 
 ### app-config.ts
@@ -19,9 +27,9 @@ window: {
   skipTaskbar: true,
   resizable: false,
   webPreferences: {
-    nodeIntegration: true,        // Required for renderer IPC
-    contextIsolation: false,      // Disabled for legacy compatibility
-    webSecurity: false,           // Disabled for local file access
+    nodeIntegration: false,       // Enhanced security
+    contextIsolation: true,       // Enhanced security
+    webSecurity: false,           // Disabled for system font access (Japanese characters)
     spellcheck: false,           // Disabled for performance
     disableDialogs: true,        // Prevent unwanted dialogs
     enableWebSQL: false,         // Disabled for security

@@ -48,7 +48,7 @@
     outline: none;
     resize: none;
     transition: all var(--animation-normal) ease;
-    font-family: inherit;
+    font-family: 'Yu Gothic UI', 'Meiryo UI', 'MS UI Gothic', 'Hiragino Kaku Gothic ProN', 'Hiragino Sans', 'BIZ UDPGothic', 'Noto Sans CJK JP', 'Noto Sans JP', 'Source Han Sans JP', 'DejaVu Sans', 'Ubuntu', monospace, sans-serif;
 }
 
 #textInput:focus {

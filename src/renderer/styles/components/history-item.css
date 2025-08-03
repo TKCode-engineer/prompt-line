@@ -45,6 +45,7 @@
     text-overflow: ellipsis;
     word-break: break-word;
     margin-bottom: var(--spacing-xs);
+    font-family: 'Yu Gothic UI', 'Meiryo UI', 'MS UI Gothic', 'Hiragino Kaku Gothic ProN', 'Hiragino Sans', 'BIZ UDPGothic', 'Noto Sans CJK JP', 'Noto Sans JP', 'Source Han Sans JP', 'DejaVu Sans', 'Ubuntu', sans-serif;
 }
 
 .history-time {

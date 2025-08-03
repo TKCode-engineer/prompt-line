@@ -93,8 +93,8 @@ export class EventHandler {
         return;
       }
 
-      // Handle Cmd+Enter for paste action
-      if (e.key === 'Enter' && e.metaKey) {
+      // Handle paste action (Ctrl+Enter on Linux/Windows, Cmd+Enter on macOS)
+      if (this.userSettings?.shortcuts?.paste && matchesShortcutString(e, this.userSettings.shortcuts.paste)) {
         e.preventDefault();
         
         if (this.textarea) {
@@ -131,10 +131,21 @@ export class EventHandler {
 
       // Handle history navigation shortcuts
       if (this.userSettings?.shortcuts) {
+        console.debug('History navigation check:', {
+          key: e.key,
+          ctrlKey: e.ctrlKey,
+          metaKey: e.metaKey,
+          historyNext: this.userSettings.shortcuts.historyNext,
+          historyPrev: this.userSettings.shortcuts.historyPrev,
+          isComposing: this.isComposing || e.isComposing
+        });
+        
         // Check for historyNext shortcut
         if (matchesShortcutString(e, this.userSettings.shortcuts.historyNext)) {
+          console.debug('History next shortcut matched');
           // Skip shortcut if IME is active to avoid conflicts with Japanese input
           if (this.isComposing || e.isComposing) {
+            console.debug('History next skipped due to IME composition');
             return;
           }
           e.preventDefault();
@@ -144,13 +155,25 @@ export class EventHandler {
 
         // Check for historyPrev shortcut
         if (matchesShortcutString(e, this.userSettings.shortcuts.historyPrev)) {
+          console.debug('History prev shortcut matched');
           // Skip shortcut if IME is active to avoid conflicts with Japanese input
           if (this.isComposing || e.isComposing) {
+            console.debug('History prev skipped due to IME composition');
             return;
           }
           e.preventDefault();
           this.onHistoryNavigation(e, 'prev');
           return;
+        }
+      } else {
+        // Debug: Check if userSettings is not initialized
+        if ((e.key === 'j' && e.ctrlKey) || (e.key === 'k' && e.ctrlKey)) {
+          console.warn('History navigation attempted but userSettings not available:', {
+            key: e.key,
+            ctrlKey: e.ctrlKey,
+            userSettings: !!this.userSettings,
+            shortcuts: !!this.userSettings?.shortcuts
+          });
         }
       }
 
@@ -167,8 +190,9 @@ export class EventHandler {
         }
       }
 
-      // Handle Cmd+, for opening settings (local shortcut only when window is active)
-      if (e.key === ',' && e.metaKey) {
+      // Handle settings shortcut (Ctrl+, on Linux/Windows, Cmd+, on macOS)
+      const settingsShortcut = process.platform === 'darwin' ? 'Cmd+,' : 'Ctrl+,';
+      if (matchesShortcutString(e, settingsShortcut)) {
         e.preventDefault();
         
         try {
@@ -188,6 +212,13 @@ export class EventHandler {
 
   private async handleWindowBlur(): Promise<void> {
     try {
+      // WSL環境ではウィンドウフォーカス管理が不安定なため、blur処理を無効化
+      const isLinuxEnvironment = window.navigator.platform.includes('Linux');
+      if (isLinuxEnvironment) {
+        console.debug('WSL環境検出: window blur処理をスキップ');
+        return;
+      }
+      
       // Hide window when focus moves to another application
       // This should happen regardless of which element has focus within the window
       setTimeout(async () => {

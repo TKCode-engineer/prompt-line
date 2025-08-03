@@ -56,7 +56,26 @@ class WindowManager {
         }
       });
 
-      logger.debug('Input window created successfully');
+      // ウィンドウの閉じる動作を設定（閉じる代わりに隠す）
+      this.inputWindow.on('close', (event) => {
+        event.preventDefault();
+        this.hideInputWindow();
+        logger.debug('Window close prevented, hiding instead');
+      });
+
+      // ウィンドウのフォーカス失った時の動作
+      this.inputWindow.on('blur', () => {
+        logger.debug('Window blur event triggered', { platform: process.platform });
+        // WSL環境では自動で隠さない（フォーカス管理が不安定）
+        if (process.platform !== 'linux') {
+          this.hideInputWindow();
+          logger.debug('Window hidden on blur');
+        } else {
+          logger.debug('WSL environment: Window blur ignored, keeping window visible');
+        }
+      });
+
+      logger.debug('Input window created successfully with event handlers');
       return this.inputWindow;
     } catch (error) {
       logger.error('Failed to create input window:', error);
@@ -203,16 +222,55 @@ class WindowManager {
         this.inputWindow!.webContents.once('did-finish-load', () => {
           const loadCompleteStartTime = performance.now();
           this.inputWindow!.webContents.send('window-shown', windowData);
+          
+          // WSL環境では確実にウィンドウが見えるように追加の設定
+          if (process.platform === 'linux') {
+            this.inputWindow!.setAlwaysOnTop(true, 'screen-saver');
+            this.inputWindow!.moveTop();
+          }
+          
           this.inputWindow!.show();
           this.inputWindow!.focus();
+          this.inputWindow!.moveTop();
           logger.debug(`⏱️  Window load completion handling: ${(performance.now() - loadCompleteStartTime).toFixed(2)}ms`);
         });
       } else {
         // Window is ready, show it
         const showStartTime = performance.now();
         this.inputWindow!.webContents.send('window-shown', windowData);
+        
+        logger.debug('Showing window...');
         this.inputWindow!.show();
-        this.inputWindow!.focus();
+        
+        // WSL環境では確実にウィンドウが見えるように強力なフォーカス制御
+        if (process.platform === 'linux') {
+          logger.debug('WSL: Applying strong window visibility controls');
+          
+          // まず最前面に設定してから他の操作を行う
+          this.inputWindow!.setAlwaysOnTop(true, 'screen-saver');
+          this.inputWindow!.setVisibleOnAllWorkspaces(true);
+          this.inputWindow!.setSkipTaskbar(false); // タスクバーに表示して確認しやすくする
+          
+          // 強制的にフォーカスとアクティブ化
+          this.inputWindow!.focus();
+          this.inputWindow!.moveTop();
+          
+          // 追加の可視性確保
+          setTimeout(() => {
+            if (this.inputWindow && !this.inputWindow.isDestroyed()) {
+              this.inputWindow.moveTop();
+              this.inputWindow.focus();
+              logger.debug(`WSL delayed focus check: visible=${this.inputWindow.isVisible()}, focused=${this.inputWindow.isFocused()}`);
+            }
+          }, 100);
+        } else {
+          logger.debug('Focusing window...');
+          this.inputWindow!.focus();
+          logger.debug('Moving window to top...');
+          this.inputWindow!.moveTop();
+        }
+        
+        logger.debug(`Window state after show: visible=${this.inputWindow!.isVisible()}, focused=${this.inputWindow!.isFocused()}`);
         logger.debug(`⏱️  Window show + focus: ${(performance.now() - showStartTime).toFixed(2)}ms`);
       }
       
@@ -229,8 +287,11 @@ class WindowManager {
   async hideInputWindow(): Promise<void> {
     try {
       if (this.inputWindow && this.inputWindow.isVisible()) {
+        logger.debug('Hiding input window - was visible');
         this.inputWindow.hide();
-        logger.debug('Input window hidden');
+        logger.debug('Input window hidden successfully');
+      } else {
+        logger.debug('Hide input window called but window not visible or not exists');
       }
     } catch (error) { 
       logger.error('Failed to hide input window:', error);
@@ -248,7 +309,14 @@ class WindowManager {
       const configStartTime = performance.now();
       const windowWidth = this.customWindowSettings.width || config.window.width;
       const windowHeight = this.customWindowSettings.height || config.window.height;
-      const position = this.customWindowSettings.position || 'active-window-center';
+      
+      // WSL環境では常にcenterポジションを使用（ネイティブツール非対応のため）
+      let position = this.customWindowSettings.position || 'active-window-center';
+      if (process.platform === 'linux') {
+        position = 'center';
+        logger.debug('WSL環境検出: 位置をcenterに強制設定');
+      }
+      
       logger.debug(`⏱️  Position config: ${(performance.now() - configStartTime).toFixed(2)}ms`);
 
       const calcStartTime = performance.now();
@@ -322,10 +390,27 @@ class WindowManager {
   private calculateCenterPosition(windowWidth: number, windowHeight: number): { x: number; y: number } {
     const display = screen.getPrimaryDisplay();
     const bounds = display.bounds;
-    return {
+    
+    // WSL環境では、より上寄り（画面の上1/3あたり）に配置して見やすくする
+    const offsetY = process.platform === 'linux' ? -bounds.height / 6 : -100;
+    
+    const position = {
       x: bounds.x + (bounds.width - windowWidth) / 2,
-      y: bounds.y + (bounds.height - windowHeight) / 2 - 100
+      y: bounds.y + (bounds.height - windowHeight) / 2 + offsetY
     };
+    
+    // 画面境界内に確実に収まるように調整
+    position.x = Math.max(bounds.x, Math.min(position.x, bounds.x + bounds.width - windowWidth));
+    position.y = Math.max(bounds.y, Math.min(position.y, bounds.y + bounds.height - windowHeight));
+    
+    logger.debug('Center position calculated', { 
+      position, 
+      bounds, 
+      windowSize: { width: windowWidth, height: windowHeight },
+      offsetY 
+    });
+    
+    return position;
   }
 
   private async calculateActiveWindowCenterPosition(
@@ -333,6 +418,12 @@ class WindowManager {
     windowHeight: number
   ): Promise<{ x: number; y: number }> {
     try {
+      // WSL環境ではネイティブツールが機能しないため、直接center positionにフォールバック
+      if (process.platform === 'linux') {
+        logger.debug('WSL環境検出: active-window-centerをcenterポジションにフォールバック');
+        return this.calculateCenterPosition(windowWidth, windowHeight);
+      }
+      
       const activeWindowBounds = await getActiveWindowBounds();
       if (activeWindowBounds) {
         const x = activeWindowBounds.x + (activeWindowBounds.width - windowWidth) / 2;
